@@ -1,7 +1,10 @@
 ﻿@page "/"
 @attribute [Authorize]
 
+@using AutoMapper
+@using Chinook.ClientModels
 @using Chinook.Models
+@using Chinook.Services.Interfaces
 @using Microsoft.EntityFrameworkCore
 
 <PageTitle>Index</PageTitle>
@@ -14,6 +17,12 @@
 }
 else
 {
+
+    <div class="mb-3">
+        <input type="text" id="search" class="form-control" placeholder="search" @bind="_searchText">
+        <button class="btn btn-success" @onclick="SearchByArtist">Search</button>
+    </div>
+
     <table class="table table-striped table-hover table-sm">
         <thead>
             <tr>
@@ -34,25 +43,29 @@ else
 }
 
 @code {
-    private List<Artist> Artists;
-    [Inject] IDbContextFactory<ChinookContext> DbFactory { get; set; }
+    private List<ArtistViewModel> Artists;
+    [Inject] private IArtistService _artistService { get; set; }
+    [Inject] private IMapper _mapper { get; set; }
+    private string _searchText;
 
     protected override async Task OnInitializedAsync() {
         await InvokeAsync(StateHasChanged);
-        Artists = await GetArtists();
+        Artists = await GetArtists(_searchText);
     }
 
-    public async Task<List<Artist>> GetArtists()
-    {   
-        var dbContext = await DbFactory.CreateDbContextAsync();
-        var users = dbContext.Users.Include(a => a.UserPlaylists).ToList();
-        
-        return dbContext.Artists.ToList();
+    public async Task<List<ArtistViewModel>> GetArtists(string searchText)
+    {
+        var data = await _artistService.GetArtists(searchText);
+        return _mapper.Map<List<ArtistViewModel>>(data);
     }
 
     public async Task<List<Album>> GetAlbumsForArtist(int artistId)
     {
-        var dbContext = await DbFactory.CreateDbContextAsync();
-        return dbContext.Albums.Where(a => a.ArtistId == artistId).ToList();
+        return new List<Album>();
+    }
+
+    private async Task SearchByArtist()
+    {
+        Artists = await GetArtists(_searchText);
     }
 }
